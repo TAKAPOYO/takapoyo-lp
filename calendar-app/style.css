@@ -1,0 +1,230 @@
+/* =====================================================
+   カレンダーセル
+===================================================== */
+.day-cell {
+  min-height: 58px;
+  border-radius: 8px;
+  padding: 4px 5px;
+  cursor: pointer;
+  transition: background-color 0.15s, box-shadow 0.15s;
+  position: relative;
+  border: 2px solid transparent;
+}
+
+@media (min-width: 768px) {
+  .day-cell { min-height: 80px; padding: 6px 8px; border-radius: 10px; }
+}
+
+.day-cell:hover { background-color: #f0f4ff; }
+
+.day-cell.other-month { opacity: 0.3; cursor: default; }
+
+.day-cell.today {
+  background-color: #eef2ff;
+  border-color: #a5b4fc;
+}
+
+.day-cell.selected {
+  background-color: #e0e7ff;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px #c7d2fe;
+}
+
+.day-cell.has-data { background-color: #f8faff; }
+
+/* 日付数字 */
+.day-number {
+  font-size: 0.75rem;
+  font-weight: 500;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+@media (min-width: 768px) {
+  .day-number { font-size: 0.82rem; width: 24px; height: 24px; }
+}
+
+.day-cell.today .day-number {
+  background-color: #6366f1;
+  color: white;
+  font-weight: 700;
+}
+
+.sunday .day-number { color: #f87171; }
+.saturday .day-number { color: #60a5fa; }
+
+/* バッジ */
+.day-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin-top: 3px;
+}
+
+.badge-todo {
+  font-size: 0.6rem;
+  padding: 1px 4px;
+  border-radius: 20px;
+  background-color: #fef3c7;
+  color: #d97706;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+@media (min-width: 768px) {
+  .badge-todo { font-size: 0.65rem; padding: 1px 6px; }
+}
+
+.badge-todo.all-done { background-color: #d1fae5; color: #059669; }
+
+.badge-memo {
+  font-size: 0.6rem;
+  padding: 1px 4px;
+  border-radius: 20px;
+  background-color: #ede9fe;
+  color: #7c3aed;
+  font-weight: 600;
+}
+
+/* =====================================================
+   サイドパネル (デスクトップ)
+===================================================== */
+@media (min-width: 768px) {
+  #side-panel.panel-hidden { display: none; }
+  #side-panel:not(.panel-hidden) { display: flex; }
+
+  #side-panel {
+    animation: slideIn 0.2s ease;
+  }
+
+  @keyframes slideIn {
+    from { transform: translateX(20px); opacity: 0; }
+    to   { transform: translateX(0); opacity: 1; }
+  }
+}
+
+/* =====================================================
+   サイドパネル (モバイル: 下から出るボトムシート)
+===================================================== */
+@media (max-width: 767px) {
+  #side-panel {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 82vh;
+    border-radius: 20px 20px 0 0;
+    z-index: 30;
+    box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.12);
+    transform: translateY(100%);
+    transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+    display: flex;
+  }
+
+  #side-panel.panel-hidden {
+    transform: translateY(100%);
+  }
+
+  #side-panel:not(.panel-hidden) {
+    transform: translateY(0);
+  }
+}
+
+/* =====================================================
+   バックドロップ
+===================================================== */
+#backdrop {
+  transition: opacity 0.3s;
+}
+
+/* =====================================================
+   Todo アイテム
+===================================================== */
+.todo-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #fafafa;
+  transition: background-color 0.1s;
+  animation: fadeIn 0.15s ease;
+}
+
+.todo-item:hover { background-color: #f3f4f6; }
+
+.todo-item input[type="checkbox"] {
+  width: 17px;
+  height: 17px;
+  accent-color: #6366f1;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.todo-item .todo-text {
+  flex: 1;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  outline: none;
+  background: transparent;
+  border: none;
+  cursor: text;
+  color: #374151;
+  /* モバイルでダブルタップ選択を防ぐ */
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.todo-item.done .todo-text {
+  text-decoration: line-through;
+  color: #9ca3af;
+}
+
+.todo-item .btn-delete-todo {
+  opacity: 0;
+  font-size: 0.75rem;
+  padding: 4px 6px;
+  border-radius: 4px;
+  color: #9ca3af;
+  cursor: pointer;
+  transition: opacity 0.1s, color 0.1s;
+  background: none;
+  border: none;
+  flex-shrink: 0;
+}
+
+/* スマホではゴミ箱を常に表示 */
+@media (max-width: 767px) {
+  .todo-item .btn-delete-todo { opacity: 1; }
+}
+
+.todo-item:hover .btn-delete-todo { opacity: 1; }
+
+.todo-item .btn-delete-todo:hover {
+  color: #ef4444;
+  background-color: #fee2e2;
+}
+
+/* =====================================================
+   アニメーション
+===================================================== */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* =====================================================
+   スクロールバー
+===================================================== */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+
+/* iOS のバウンシングスクロールを防ぐ */
+body { overscroll-behavior: none; }
