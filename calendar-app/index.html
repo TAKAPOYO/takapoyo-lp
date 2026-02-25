@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>カレンダー</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-gray-50 text-gray-800 min-h-screen">
+
+  <!-- ヘッダー -->
+  <header class="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between sticky top-0 z-10">
+    <div class="flex items-center gap-3">
+      <span class="text-xl font-bold text-indigo-600">📅 カレンダー</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <!-- Vault接続ボタン -->
+      <button id="btn-vault" class="flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors">
+        <span id="vault-icon">📁</span>
+        <span id="vault-label">Vaultを選択</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="flex h-[calc(100vh-57px)]">
+
+    <!-- カレンダーエリア -->
+    <main class="flex-1 overflow-auto p-6">
+      <!-- 月ナビゲーション -->
+      <div class="flex items-center justify-between mb-5">
+        <button id="btn-prev" class="p-2 rounded-lg hover:bg-gray-200 transition-colors text-gray-600 text-lg">‹</button>
+        <h2 id="month-title" class="text-xl font-semibold text-gray-700"></h2>
+        <button id="btn-next" class="p-2 rounded-lg hover:bg-gray-200 transition-colors text-gray-600 text-lg">›</button>
+      </div>
+
+      <!-- 曜日ヘッダー -->
+      <div class="grid grid-cols-7 mb-1">
+        <div class="text-center text-xs font-medium text-red-400 py-1">日</div>
+        <div class="text-center text-xs font-medium text-gray-500 py-1">月</div>
+        <div class="text-center text-xs font-medium text-gray-500 py-1">火</div>
+        <div class="text-center text-xs font-medium text-gray-500 py-1">水</div>
+        <div class="text-center text-xs font-medium text-gray-500 py-1">木</div>
+        <div class="text-center text-xs font-medium text-gray-500 py-1">金</div>
+        <div class="text-center text-xs font-medium text-blue-400 py-1">土</div>
+      </div>
+
+      <!-- カレンダーグリッド -->
+      <div id="calendar-grid" class="grid grid-cols-7 gap-1"></div>
+    </main>
+
+    <!-- サイドパネル -->
+    <aside id="side-panel" class="w-96 bg-white border-l border-gray-200 flex flex-col hidden">
+      <!-- パネルヘッダー -->
+      <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+        <div>
+          <h3 id="panel-date-label" class="font-semibold text-gray-800 text-lg"></h3>
+          <p id="panel-weekday-label" class="text-sm text-gray-400"></p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="btn-open-obsidian" title="Obsidianで開く"
+            class="hidden px-2.5 py-1.5 text-xs bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition-colors border border-indigo-200">
+            Obsidianで開く
+          </button>
+          <button id="btn-close-panel" class="p-1.5 rounded-lg hover:bg-gray-100 transition-colors text-gray-400">✕</button>
+        </div>
+      </div>
+
+      <div class="flex-1 overflow-auto p-5 flex flex-col gap-6">
+
+        <!-- Todo セクション -->
+        <section>
+          <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Todo</h4>
+
+          <!-- Todo追加フォーム -->
+          <div class="flex gap-2 mb-3">
+            <input id="todo-input" type="text" placeholder="タスクを追加..."
+              class="flex-1 text-sm px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-200 transition">
+            <button id="btn-add-todo"
+              class="px-3 py-2 bg-indigo-500 text-white text-sm rounded-lg hover:bg-indigo-600 transition-colors">追加</button>
+          </div>
+
+          <!-- Todoリスト -->
+          <ul id="todo-list" class="flex flex-col gap-1.5"></ul>
+          <p id="todo-empty" class="text-sm text-gray-400 text-center py-3 hidden">タスクがありません</p>
+        </section>
+
+        <!-- メモ セクション -->
+        <section class="flex flex-col flex-1">
+          <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">メモ</h4>
+          <textarea id="memo-input" placeholder="今日のメモを書く..."
+            class="flex-1 min-h-40 text-sm px-3 py-2.5 border border-gray-200 rounded-lg resize-none focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-200 transition leading-relaxed"></textarea>
+          <p id="memo-save-status" class="text-xs text-gray-400 text-right mt-1.5 h-4"></p>
+        </section>
+
+      </div>
+    </aside>
+
+    <!-- 空状態 (パネル未選択) -->
+    <aside id="empty-panel" class="w-96 bg-white border-l border-gray-200 flex flex-col items-center justify-center text-center p-10 text-gray-300">
+      <div class="text-5xl mb-4">📆</div>
+      <p class="text-sm">日付をクリックして<br>メモやTodoを管理</p>
+    </aside>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
