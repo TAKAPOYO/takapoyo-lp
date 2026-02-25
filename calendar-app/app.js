@@ -242,7 +242,40 @@ function renderCalendar() {
   }
 }
 
-// ── パネル ────────────────────────────────────────
+// ── パネル開閉 ────────────────────────────────────
+
+function isMobile() {
+  return window.innerWidth < 768;
+}
+
+function openPanel() {
+  const panel = document.getElementById('side-panel');
+  panel.classList.remove('panel-hidden');
+
+  if (isMobile()) {
+    const backdrop = document.getElementById('backdrop');
+    backdrop.classList.remove('hidden');
+    // スクロール防止
+    document.body.style.overflow = 'hidden';
+  } else {
+    document.getElementById('empty-panel').classList.add('hidden');
+  }
+}
+
+function closePanel() {
+  const panel = document.getElementById('side-panel');
+  panel.classList.add('panel-hidden');
+  state.selectedDate = null;
+
+  if (isMobile()) {
+    document.getElementById('backdrop').classList.add('hidden');
+    document.body.style.overflow = '';
+  } else {
+    document.getElementById('empty-panel').classList.remove('hidden');
+  }
+
+  renderCalendar();
+}
 
 async function selectDate(dateStr) {
   state.selectedDate = dateStr;
@@ -254,9 +287,7 @@ async function selectDate(dateStr) {
 
   renderCalendar();
   renderPanel(dateStr);
-
-  document.getElementById('side-panel').classList.remove('hidden');
-  document.getElementById('empty-panel').classList.add('hidden');
+  openPanel();
 }
 
 function renderPanel(dateStr) {
@@ -429,12 +460,10 @@ function initEvents() {
   });
 
   // パネルを閉じる
-  document.getElementById('btn-close-panel').addEventListener('click', () => {
-    state.selectedDate = null;
-    document.getElementById('side-panel').classList.add('hidden');
-    document.getElementById('empty-panel').classList.remove('hidden');
-    renderCalendar();
-  });
+  document.getElementById('btn-close-panel').addEventListener('click', closePanel);
+
+  // バックドロップをタップして閉じる (モバイル)
+  document.getElementById('backdrop').addEventListener('click', closePanel);
 
   // Vault選択
   document.getElementById('btn-vault').addEventListener('click', selectVault);
@@ -459,8 +488,10 @@ function init() {
   initEvents();
   renderCalendar();
 
-  // 今日の日付を自動選択
-  selectDate(todayStr());
+  // PC のみ今日を自動選択 (スマホは手動で開く方が自然)
+  if (!isMobile()) {
+    selectDate(todayStr());
+  }
 }
 
 init();
