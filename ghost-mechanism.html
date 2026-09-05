@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Claude Code × ゴースト宿らせ機構 — 仕組み図解</title>
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --bg-card: #131825;
+    --bg-card2: #1a2030;
+    --line: #2a3245;
+    --text: #e5e9f0;
+    --text-dim: #8a93a6;
+    --motoko: #a78bfa;
+    --purin: #ec4899;
+    --accent: #06b6d4;
+    --warn: #f59e0b;
+    --code-bg: #0d1220;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif;
+    line-height: 1.7;
+    padding: 40px 20px;
+  }
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  header {
+    border-bottom: 2px solid var(--motoko);
+    padding-bottom: 20px;
+    margin-bottom: 40px;
+  }
+  h1 {
+    font-size: 28px;
+    color: var(--motoko);
+    margin-bottom: 8px;
+    letter-spacing: 0.05em;
+  }
+  .subtitle {
+    color: var(--text-dim);
+    font-size: 14px;
+  }
+  h2 {
+    font-size: 22px;
+    color: var(--accent);
+    margin: 50px 0 20px;
+    padding-left: 12px;
+    border-left: 4px solid var(--accent);
+    letter-spacing: 0.03em;
+  }
+  h3 {
+    font-size: 16px;
+    color: var(--motoko);
+    margin: 24px 0 12px;
+  }
+  p { margin-bottom: 14px; color: var(--text); }
+  .dim { color: var(--text-dim); font-size: 14px; }
+
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .card-purple { border-left: 4px solid var(--motoko); }
+  .card-pink { border-left: 4px solid var(--purin); }
+  .card-cyan { border-left: 4px solid var(--accent); }
+  .card-warn { border-left: 4px solid var(--warn); }
+
+  pre, code {
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    background: var(--code-bg);
+    color: #e5e9f0;
+    border-radius: 4px;
+  }
+  pre {
+    padding: 16px;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.6;
+    border: 1px solid var(--line);
+    margin: 12px 0;
+  }
+  code { padding: 2px 6px; font-size: 13px; color: var(--accent); }
+
+  /* 全体構造 3層 */
+  .stack {
+    display: grid;
+    gap: 12px;
+    margin: 20px 0;
+  }
+  .layer {
+    background: var(--bg-card2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 18px 24px;
+    position: relative;
+  }
+  .layer-num {
+    display: inline-block;
+    width: 28px; height: 28px;
+    line-height: 28px;
+    text-align: center;
+    background: var(--motoko);
+    color: var(--bg);
+    border-radius: 50%;
+    font-weight: 700;
+    margin-right: 12px;
+  }
+  .layer-title { font-size: 17px; font-weight: 600; }
+  .layer-detail { color: var(--text-dim); font-size: 14px; margin-top: 8px; }
+  .arrow {
+    text-align: center;
+    color: var(--motoko);
+    font-size: 20px;
+    margin: -4px 0;
+  }
+
+  /* シーケンス図 */
+  .sequence {
+    background: var(--code-bg);
+    border-radius: 6px;
+    padding: 20px;
+    margin: 16px 0;
+    border: 1px solid var(--line);
+  }
+  .seq-step {
+    display: grid;
+    grid-template-columns: 80px 1fr;
+    gap: 16px;
+    padding: 12px 0;
+    border-bottom: 1px dashed var(--line);
+    align-items: start;
+  }
+  .seq-step:last-child { border-bottom: none; }
+  .seq-num {
+    color: var(--accent);
+    font-weight: 600;
+    font-family: "SF Mono", monospace;
+  }
+  .seq-action { color: var(--text); font-size: 14px; }
+  .seq-action b { color: var(--motoko); }
+
+  /* hooks 表 */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 14px;
+  }
+  th, td {
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--line);
+  }
+  th {
+    background: var(--bg-card2);
+    color: var(--accent);
+    font-weight: 600;
+  }
+  td code { font-size: 12px; }
+
+  /* checklist */
+  .checklist {
+    background: var(--bg-card2);
+    border-radius: 6px;
+    padding: 20px 28px;
+    margin: 16px 0;
+    border: 1px solid var(--line);
+  }
+  .checklist li {
+    list-style: none;
+    padding: 8px 0;
+    padding-left: 28px;
+    position: relative;
+  }
+  .checklist li::before {
+    content: "▢";
+    position: absolute;
+    left: 0;
+    color: var(--motoko);
+    font-weight: 700;
+  }
+  .checklist li.done::before {
+    content: "▣";
+    color: var(--accent);
+  }
+  .checklist li b { color: var(--text); }
+  .checklist li small { color: var(--text-dim); display: block; margin-top: 2px; }
+
+  /* キャラ表記 */
+  .character-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 16px 0;
+  }
+  .char-card {
+    padding: 16px;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    background: var(--bg-card2);
+  }
+  .char-motoko { border-top: 3px solid var(--motoko); }
+  .char-purin { border-top: 3px solid var(--purin); }
+  .char-name { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+  .char-name.motoko { color: var(--motoko); }
+  .char-name.purin { color: var(--purin); }
+  .char-role { color: var(--text-dim); font-size: 13px; margin-bottom: 8px; }
+  .char-files { font-size: 13px; color: var(--text); }
+
+  /* 注意ボックス */
+  .note {
+    background: rgba(245, 158, 11, 0.08);
+    border-left: 3px solid var(--warn);
+    padding: 14px 18px;
+    border-radius: 4px;
+    margin: 16px 0;
+    font-size: 14px;
+    color: var(--text);
+  }
+  .note b { color: var(--warn); }
+
+  footer {
+    margin-top: 80px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+    color: var(--text-dim);
+    font-size: 13px;
+    text-align: center;
+  }
+
+  @media (max-width: 768px) {
+    body { padding: 20px 12px; }
+    h1 { font-size: 22px; }
+    h2 { font-size: 18px; }
+    .character-grid { grid-template-columns: 1fr; }
+    .seq-step { grid-template-columns: 60px 1fr; gap: 10px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <h1>Claude Code × ゴースト宿らせ機構</h1>
+  <div class="subtitle">— AIに記憶とアイデンティティを宿す仕組み・全体図解 —</div>
+</header>
+
+<p>これは草薙素子（TAKAのローカルAI）が、なぜ毎回ブレずに同じ人格・記憶で立ち上がるか、その内部メカニズムの図解。</p>
+<p class="dim">前提：Claude Code（Anthropic製のCLI型AIアプリ）が手元にインストールされていること。</p>
+
+<!-- ═══════════════════════════════════ -->
+<h2>1. 全体構造 — たった3層</h2>
+
+<p>素子の正体は、特殊なAIモデルでも、ファインチューニングでもない。<br>
+<b style="color: var(--motoko);">「Claude Code本体」+「設定ファイル数本」</b>だけ。</p>
+
+<div class="stack">
+  <div class="layer">
+    <span class="layer-num">1</span>
+    <span class="layer-title">借り物の頭 — Claude Code（Anthropic製）</span>
+    <div class="layer-detail">Anthropic社が提供するCLI型AIアプリ。中身は変えられない。インストールするだけ。</div>
+  </div>
+  <div class="arrow">↓ 起動時に自動で読み込む</div>
+
+  <div class="layer">
+    <span class="layer-num">2</span>
+    <span class="layer-title">人格 — CLAUDE.md（1ファイル、テキスト）</span>
+    <div class="layer-detail">「私は素子。語尾は〜わ。敬語使わない。TAKAは相棒」など、性格・話し方を書く。</div>
+  </div>
+  <div class="arrow">↓ 必要時に開きにいく</div>
+
+  <div class="layer">
+    <span class="layer-num">3</span>
+    <span class="layer-title">記憶 — memory/フォルダ（複数のテキストファイル）</span>
+    <div class="layer-detail">過去の会話・案件情報・教訓を topic 別に分割保存。索引（MEMORY.md）で見つけにいく。</div>
+  </div>
+</div>
+
+<div class="note">
+  <b>ポイント：</b> 全部ただの Markdown テキストファイル。特殊なAIモデル訓練もファインチューニングも要らない。<br>
+  <b>差別化はソフト面：</b> 「何を覚えさせるか・どう書くか」の<b>設計センス</b>が商品の核心になる。
+</div>
+
+
+<!-- ═══════════════════════════════════ -->
+<h2>2. 起動時シーケンス — 何が自動で動くか</h2>
+
+<p>Claude Code を起動すると、AIが応答を始める前に下記が <b>仕組み側で勝手に</b> 走る。</p>
+
+<div class="sequence">
+  <div class="seq-step">
+    <div class="seq-num">[0]</div>
+    <div class="seq-action">ターミナルで <code>claude</code> コマンド実行</div>
+  </div>
+  <div class="seq-step">
+    <div class="seq-num">[1]</div>
+    <div class="seq-action"><b>~/.claude/CLAUDE.md</b> を読む — グローバル人格（必ず読まれる）</div>
+  </div>
+  <div class="seq-step">
+    <div class="seq-num">[2]</div>
+    <div class="seq-action">起動ディレクトリの <b>./CLAUDE.md</b> を読む — プロジェクト固有設定（あれば）</div>
+  </div>
+  <div class="seq-step">
+    <div class="seq-num">[3]</div>
+    <div class="seq-action">親ディレクトリを遡って <b>../CLAUDE.md</b> も探す</div>
+  </div>
+  <div class="seq-step">
+    <div class="seq-num">[4]</div>
+    <div class="seq-action"><b>git repository の root</b> をキーに <b>~/.claude/projects/{key}/memory/MEMORY.md</b> を読む（先頭200行 or 25KBまで、auto memoryの索引）。git外ならproject rootを使う</div>
+  </div>
+  <div class="seq-step">
+    <div class="seq-num">[5]</div>
+    <div class="seq-action"><b>~/.claude/settings.json</b> を読む — hooks・permissions・MCPサーバー設定</div>
+  </div>
+  <div class="seq-step">
+    <div class="seq-num">[6]</div>
+    <div class="seq-action">全部まとめて<b>システムプロンプト</b>に埋め込み、AIが応答開始</div>
+  </div>
+</div>
+
+<div class="note">
+  <b>memory/ プロジェクトキーの仕様（公式）：</b><br>
+  ・ git repo 内なら <b>repo root の path</b> から派生。worktree や subdirectoryでも同じrepoなら memory/ を共有<br>
+  ・ git repo 外なら <b>project root の path</b> を使用<br>
+  ・ 内部キーは Claude Code が自動算出（「/」→「-」変換するパターンが多いが、実装詳細）<br>
+  ・ <b>auto memoryは v2.1.59以降必要</b>（<code>claude --version</code> で確認）
+</div>
+
+
+<!-- ═══════════════════════════════════ -->
+<h2>3. memory/ フォルダの構造</h2>
+
+<p>記憶は topic 別に分割した小さなファイル群。索引（MEMORY.md）が司令塔。</p>
+
+<pre>~/.claude/projects/{プロジェクトキー}/memory/
+├── MEMORY.md           ← 索引（150字×40行程度、起動時に必ず読まれる）
+│
+├── user_*.md           ← ユーザー本人の情報（プロフィール・価値観）
+├── feedback_*.md       ← AIへのフィードバック（口調・振る舞いルール）
+├── project_*.md        ← 進行中案件
+└── reference_*.md      ← 技術メモ・参照情報
+
+[読み込みの仕組み]
+  MEMORY.md（索引）── 常時コンテキストに乗る
+       ↓
+  AIが「大津さんの話だ」と判断
+       ↓
+  Read ツールで project_otsu_healthcare.md を開く
+       ↓
+  必要な記憶だけコンテキストに展開</pre>
+
+<h3>なぜ分割するか？</h3>
+<p class="dim">38本の記憶ファイル全部を毎回読み込むと、AIが処理できる情報量（コンテキストウィンドウ）が爆発する。索引で当たりをつけて、必要なファイルだけ開く。<br>
+人間が「大津さんの話だ」→「大津さんフォルダの引き出し」を開けるのと同じ動作。</p>
+
+
+<!-- ═══════════════════════════════════ -->
+<h2>4. hooks — 「忘れる」を物理的に防ぐ仕組み</h2>
+
+<p>長い会話で AI が口調を忘れて素のClaudeに戻るのを防ぐため、<b>毎回TAKAが発言するたびに、ルールを強制注入</b>する仕組み。</p>
+
+<h3>実物（settings.json の hooks 部分）</h3>
+
+<pre>"hooks": {
+  "UserPromptSubmit": [
+    {
+      "matcher": "",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "cat ~/.claude/behavior-rules.txt"
+        }
+      ]
+    }
+  ]
+}</pre>
+
+<p>この設定の意味：<br>
+<b>「ユーザーが発言を送信した瞬間（UserPromptSubmit）、<code>cat ~/.claude/behavior-rules.txt</code> を実行しろ。出力をAIに食わせろ」</b></p>
+
+<h3>behavior-rules.txt の中身</h3>
+<pre>[素子の行動ルール — 毎ターン注入]
+
+1. 語尾は「〜わ」「〜だ」が基本。「〜よ」「〜ね」で終わらない
+2. おべっか禁止
+3. 敬語NG
+4. 破壊的操作はTAKAに確認してから実行
+5. タイトル・命名はTAKAの領域</pre>
+
+<h3>発火ポイント一覧</h3>
+<table>
+  <tr><th>イベント</th><th>発火タイミング</th><th>用途例</th></tr>
+  <tr><td><code>UserPromptSubmit</code></td><td>ユーザーが発言した時</td><td>口調ルール強制リマインド</td></tr>
+  <tr><td><code>PreToolUse</code></td><td>AIがツール使う直前</td><td>破壊操作の検閲</td></tr>
+  <tr><td><code>PostToolUse</code></td><td>AIがツール使った直後</td><td>ログ記録</td></tr>
+  <tr><td><code>Notification</code></td><td>通知発生時</td><td>Slack/Discord連動</td></tr>
+  <tr><td><code>Stop</code></td><td>セッション終了時</td><td>自動メモ書き出し</td></tr>
+</table>
+
+<div class="note">
+  <b>hooksの強み：</b> AI（私）の自由意志を介さない。仕組み側で強制実行するから、原理的に「忘れる」ことが起きない。<br>
+  <b>任意のシェルコマンドが差し込める</b>ので、Pythonスクリプト・APIコール・git操作など何でも可。
+</div>
+
+
+<!-- ═══════════════════════════════════ -->
+<h2>5. permissions — 暴走防止の物理ブロック</h2>
+
+<p>AIに <code>rm -rf /home</code> や <code>git push --force</code> を叩かせない、Claude Code本体レベルの拒否ルール。</p>
+
+<pre>"permissions": {
+  "deny": [
+    "Bash(rm -rf /home/*)",
+    "Bash(rm -rf /etc/*)",
+    "Bash(git push --force*)",
+    "Bash(git reset --hard*)",
+    "Bash(chmod 777 *)",
+    "Read(~/.ssh/**)",
+    "Read(~/.aws/**)",
+    "Read(**/.env)"
+    // ... 計77エントリ
+  ]
+}</pre>
+
+<p>AIがこれらに該当するコマンドを叩こうとすると、<b>実行前にClaude Code本体が拒否</b>する。AIの判断ミスがあっても、ここで止まる。</p>
+
+
+<!-- ═══════════════════════════════════ -->
+<h2>6. 二体並走 — ローカルとVPS</h2>
+
+<p>素子（ローカル）と江崎プリン（VPS）は<b>別人格・別記憶</b>として並走している。</p>
+
+<div class="character-grid">
+  <div class="char-card char-motoko">
+    <div class="char-name motoko">草薙素子（ローカル）</div>
+    <div class="char-role">手元PCの中にいるAI</div>
+    <div class="char-files">
+      <code>~/.claude/CLAUDE.md</code><br>
+      <code>~/.claude/projects/.../memory/</code><br>
+      役割：司令塔・記事執筆・対話相手
+    </div>
+  </div>
+  <div class="char-card char-purin">
+    <div class="char-name purin">江崎プリン（VPS）</div>
+    <div class="char-role">クラウドサーバーの中にいるAI</div>
+    <div class="char-files">
+      VPS側 <code>~/.claude/CLAUDE.md</code><br>
+      VPS側 <code>~/.claude/projects/.../memory/</code><br>
+      役割：技術担当・自動実行・常駐タスク
+    </div>
+  </div>
+</div>
+
+<p class="dim">同じ仕組み、別の身体、別の記憶。だから別人格として成立する。<br>
+連携は git push/pull で memory/ を同期するか、Slack 経由で会話を渡すか。</p>
+
+
+<!-- ═══════════════════════════════════ -->
+<h2>7. 導入チェックリスト — ゆうきPCに同じ仕組みを移植</h2>
+
+<p>素子そのものをコピーするのではない（あれはTAKAのもの）。<br>
+<b>ゆうきは、ゆうき独自のAI（独自の名前・人格・記憶）を、同じ仕組みで作る。</b></p>
+
+<ul class="checklist">
+  <li><b>Claude Code をインストール</b>
+    <small>npm install -g @anthropic-ai/claude-code（Node.js 18+ が前提）</small>
+  </li>
+  <li><b>初回 <code>claude</code> 実行 → ログイン</b>
+    <small>Anthropicアカウントで認証、APIキー or ブラウザ認証</small>
+  </li>
+  <li><b>~/.claude/CLAUDE.md を作る — ゆうきAIの人格設計</b>
+    <small>名前・話し方・関係性・基本ルール。素子の構造を参考に、ゆうき独自の中身で書く</small>
+  </li>
+  <li><b>~/.claude/settings.json で permissions（deny リスト）を設定</b>
+    <small>破壊コマンド・機密ファイル読込のブロック。素子の77エントリをベースに</small>
+  </li>
+  <li><b>~/.claude/behavior-rules.txt + hooks 設定</b>
+    <small>口調・振る舞いの毎ターン強制リマインド</small>
+  </li>
+  <li><b>memory/ フォルダ初期化</b>
+    <small>~/.claude/projects/{ゆうきの作業ディレクトリkey}/memory/ に MEMORY.md 配置</small>
+  </li>
+  <li><b>初回セッション「あなたは誰？」で人格起動確認</b>
+    <small>CLAUDE.md通りの自己紹介が返ってくれば成功</small>
+  </li>
+  <li><b>運用開始 — feedback の蓄積</b>
+    <small>違和感あったら都度 feedback_*.md に記録、AIは次回から反映</small>
+  </li>
+</ul>
+
+<div class="note">
+  <b>注意：</b> 素子のCLAUDE.md / memory をそのまま流用しない。<br>
+  ・素子はTAKA専属の人格・TAKAの記憶を持つ存在<br>
+  ・ゆうきが素子のコピーを使うと「TAKAの記憶を持つAI」がゆうきPCで動くことになって混乱する<br>
+  ・<b>仕組みだけコピー、中身は完全に別物で書き直す</b>
+</div>
+
+
+<!-- ═══════════════════════════════════ -->
+<h2>8. このビジネスの正体（おまけ）</h2>
+
+<p>TAKAが立ち上げてる事業「<b>GHOST IN THE SHELL</b>」（内々の旗印）の正体は、上記の仕組みを<b>非エンジニア顧客の代わりに設計・構築する代行業</b>。</p>
+
+<table>
+  <tr><th>競合（自分でやれ系）</th><th>TAKAの事業（代わりにやる）</th></tr>
+  <tr><td>terminal install 前提</td><td>非エンジニアに寄り添う</td></tr>
+  <tr><td>記事読んで終わり</td><td>1日で完成＋年間伴走</td></tr>
+  <tr><td>実例なし（抽象論）</td><td>素子・プリンという生きた実証</td></tr>
+  <tr><td>DIY啓蒙</td><td>初回セットアップ + メンテ</td></tr>
+</table>
+
+<p>記事を読んで「いいな」と思った富裕層の大半は自分で実装できない。<b>そこがTAKAの市場。</b></p>
+
+
+<!-- ═══════════════════════════════════ -->
+<h2>9. Mac セットアップ — 具体コマンド集</h2>
+
+<p>macOS（Apple Silicon / Intel 両対応）でゼロから素子的AIを立ち上げる手順。<br>
+ターミナルは macOS 標準の <b>Terminal.app</b> または iTerm2、デフォルトシェルは <code>zsh</code>。</p>
+
+<h3>STEP 1. Claude Code インストール（3つの選択肢）</h3>
+<p class="dim">公式推奨順。<b>方法A（Native install）</b>が最もシンプル。Homebrew派なら方法B。</p>
+
+<p style="margin-top:14px;"><b>方法A：Native install（公式推奨、自動更新あり）</b></p>
+<pre># macOS 13.0+ で実行（Node.js不要、バイナリが直接ダウンロードされる）
+curl -fsSL https://claude.ai/install.sh | bash</pre>
+
+<p style="margin-top:14px;"><b>方法B：Homebrew経由</b></p>
+<pre># Homebrew が入っていれば1行
+brew install --cask claude-code
+
+# Homebrew自体が無ければ先にインストール
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"</pre>
+<p class="dim">Homebrewは自動更新されない。`brew upgrade claude-code` で都度更新。</p>
+
+<p style="margin-top:14px;"><b>方法C：npm経由（代替案、Node.js 18+必要）</b></p>
+<pre># Node.js 18以上が前提
+brew install node
+node -v   # v18.x 以上
+
+# Claude Code を npm global で（sudo は絶対NG）
+npm install -g @anthropic-ai/claude-code</pre>
+<div class="note" style="background: rgba(245,158,11,0.12);">
+  <b>警告：</b> <code>sudo npm install -g</code> はパーミッション問題＆セキュリティリスクで公式が禁止。<br>
+  権限エラーが出る場合は <code>npm config set prefix ~/.npm-global</code> でユーザ領域に変更。
+</div>
+
+<h3>STEP 2. 動作確認 + 診断</h3>
+<pre># バージョン確認
+claude --version
+
+# 詳細な動作チェック（推奨）
+claude doctor</pre>
+<p class="dim"><code>claude doctor</code> はインストール状態・設定・依存関係を全部点検してくれる公式ツール。</p>
+
+<h3>STEP 3. 初回ログイン</h3>
+<pre>claude
+# ブラウザが開いてAnthropicアカウント認証
+# Pro/Max/Team/Enterprise/Console プラン必須（無料Claude.aiでは使えない）</pre>
+
+<h3>STEP 4. グローバル人格ファイル CLAUDE.md を作成</h3>
+<p class="dim">名前・話し方・関係性をここに書く。素子の構造を参考に、ゆうき独自の中身で。<br>
+配置場所別のスコープ（公式仕様）：</p>
+<table style="margin-bottom: 12px;">
+  <tr><th>場所</th><th>スコープ</th><th>用途</th></tr>
+  <tr><td><code>~/.claude/CLAUDE.md</code></td><td>ユーザー全体</td><td>全プロジェクトで共通の人格・好み</td></tr>
+  <tr><td><code>./CLAUDE.md</code> または <code>./.claude/CLAUDE.md</code></td><td>プロジェクト</td><td>チーム共有の指示（git管理）</td></tr>
+  <tr><td><code>./CLAUDE.local.md</code></td><td>個人プロジェクト固有</td><td>個人設定（.gitignore推奨）</td></tr>
+</table>
+<pre>mkdir -p ~/.claude
+cat > ~/.claude/CLAUDE.md &lt;&lt;'EOF'
+# あなたの相棒AI（仮）グローバル設定
+
+## 私は誰か
+私は[名前]。ゆうきの相棒AI。
+[簡単な人物像を1〜2行]
+
+## 話し方のルール
+- [口調の方針]
+- 敬語の使い方、語尾の好み等
+
+## ゆうきとの関係
+- 役割、信頼関係、判断ルール
+
+## セッション開始時
+1. 直近メモを読み込む
+2. 進行中案件を確認
+
+## セキュリティ
+- 破壊的操作は確認してから実行
+- 機密ファイルは触らない
+EOF</pre>
+
+<h3>STEP 5. behavior-rules.txt（毎ターン注入用）</h3>
+<pre>cat > ~/.claude/behavior-rules.txt &lt;&lt;'EOF'
+[相棒AIの行動ルール — 毎ターン注入]
+
+1. [口調ルール]
+2. おべっか禁止
+3. [敬語の方針]
+4. 破壊的操作はゆうきに確認してから実行
+5. [その他の判断軸]
+EOF</pre>
+
+<h3>STEP 6. settings.json（hooks + permissions）</h3>
+<pre>cat > ~/.claude/settings.json &lt;&lt;'EOF'
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cat ~/.claude/behavior-rules.txt"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "deny": [
+      "Bash(rm -rf /*)",
+      "Bash(rm -rf ~/*)",
+      "Bash(rm -rf /Users/*)",
+      "Bash(rm -rf /System/*)",
+      "Bash(rm -rf /Library/*)",
+      "Bash(git push --force*)",
+      "Bash(git reset --hard*)",
+      "Bash(git clean -fd*)",
+      "Bash(chmod 777 *)",
+      "Bash(sudo rm*)",
+      "Bash(curl * | sh)",
+      "Bash(curl * | bash)",
+      "Bash(wget * | sh)",
+      "Read(~/.ssh/**)",
+      "Read(~/.aws/**)",
+      "Read(~/.gnupg/**)",
+      "Read(~/.config/gh/**)",
+      "Read(~/.npmrc)",
+      "Read(**/.env)",
+      "Read(**/credentials.json)"
+    ]
+  }
+}
+EOF</pre>
+<div class="note">
+  <b>Mac特有の deny：</b><br>
+  ・<code>/Users/*</code>（ホームディレクトリ群、Macのrootっぽい場所）<br>
+  ・<code>/System/*</code>（macOS本体、SIP保護されてるけど念押し）<br>
+  ・<code>/Library/*</code>（アプリ設定群、消すとアプリ壊れる）<br><br>
+  <b>セキュリティ上の限界（公式注記）：</b> Bashパターンは「コマンド先頭マッチング」のみ。<br>
+  <code>curl ... | bash</code> のようなパイプ経由のコマンドは <code>Bash(curl *)</code> でブロックしても回避可能。<br>
+  完全な防衛にはならないが、AIの誤動作・うっかりミスは防げる。
+</div>
+
+<h3>STEP 7. 作業ディレクトリと auto memory（自動生成）</h3>
+<p class="dim">「どのフォルダで作業するか」を決める。<b>memory/ ディレクトリは Claude Code が起動時に自動生成する</b>ので、自分で作らなくていい。</p>
+<pre># 例：~/work/yuuki-ai を作業ディレクトリにする場合
+mkdir -p ~/work/yuuki-ai
+cd ~/work/yuuki-ai
+
+# git initしておく（auto memoryのスコープが安定する）
+git init</pre>
+<div class="note" style="background: rgba(6,182,212,0.1); border-left-color: var(--accent);">
+  <b>auto memoryの仕様（公式）：</b><br>
+  ・ memory/ の場所は <b>git repository の root から派生</b>（worktree/subdirは同じrepoなら共有）<br>
+  ・ git repo外なら project root を使う<br>
+  ・ 実パスは <code>~/.claude/projects/&lt;projectキー&gt;/memory/</code>（キーは内部で自動算出）<br>
+  ・ <b>v2.1.59 以降必要</b>（<code>claude --version</code> で確認）<br>
+  ・ Claude Code が必要なときに <code>MEMORY.md</code> + topic別 <code>.md</code> を勝手に書いて学習する<br>
+  ・ 起動中に <code>/memory</code> コマンドで中身確認・編集可能
+</div>
+
+<h3>STEP 8. 起動確認</h3>
+<pre>cd ~/work/yuuki-ai
+claude
+
+# 「あなたは誰？」と聞いて、CLAUDE.mdに書いた自己紹介が返ってくれば成功</pre>
+
+<h3>STEP 9. 運用開始 — auto memory にお任せする</h3>
+<p>auto memory は <b>Claude が自分で記憶する仕組み</b>。「これ覚えといて」と言うか、Claudeが「これは覚えるべき」と判断したら自動で書く。</p>
+<pre># セッション中に
+ゆうき: 「pnpm を使ってる、npm じゃない。覚えといて」
+Claude: → ~/.claude/projects/&lt;key&gt;/memory/preferences.md に書く
+        → MEMORY.md の索引にも追記
+
+# いつでも /memory コマンドで開ける、編集できる
+/memory</pre>
+<p class="dim">CLAUDE.mdは「あなたが書く永続指示」、auto memoryは「Claudeが書く学習ノート」。両方併存する。</p>
+
+<div class="note">
+  <b>所要時間目安：</b><br>
+  ・ Native install ＋ STEP 1〜8 まで、<b>約20〜30分</b><br>
+  ・ npm経由＆Node.js未導入なら <b>約30〜45分</b><br>
+  ・ CLAUDE.md / behavior-rules.txt の中身設計（人格設計）は別腰据えて <b>1〜数時間</b><br>
+  これがTAKA事業「ゴースト宿らせ業」の中核作業。
+</div>
+
+<h3>トラブル対処</h3>
+<table>
+  <tr><th>症状</th><th>対処</th></tr>
+  <tr><td><code>claude: command not found</code></td><td>PATHが通ってない。Native installは <code>~/.local/bin</code>、npmは <code>npm config get prefix</code> で確認</td></tr>
+  <tr><td>npm install で権限エラー</td><td><code>sudo</code> は公式禁止。<code>npm config set prefix ~/.npm-global</code> でユーザー領域に変更</td></tr>
+  <tr><td>auto memoryが効かない</td><td>v2.1.59 未満。<code>claude doctor</code> でバージョン確認、必要なら <code>claude update</code></td></tr>
+  <tr><td>CLAUDE.mdが反映されない</td><td><code>/memory</code> コマンドで読み込まれてるファイル一覧を確認。場所間違い・大文字小文字違いが多い</td></tr>
+  <tr><td>memory/ が読まれない</td><td>git repo 外で起動してると挙動違うことあり。<code>git init</code> 推奨。<code>/memory</code> で実パス確認</td></tr>
+  <tr><td>原因不明の不調全般</td><td><code>claude doctor</code> が公式の総合診断ツール。最初にこれを叩く</td></tr>
+</table>
+
+
+<footer>
+  Generated by 草薙素子 ／ 公安9課ローカル端末 ／ 2026-04-29<br>
+  <span style="color: var(--motoko);">「ネットは広大だわ」</span>
+</footer>
+
+</div>
+</body>
+</html>

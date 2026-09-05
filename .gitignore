@@ -1,1 +1,11 @@
 node_modules/
+
+# X analysis temporary files
+.tmp_x_analysis/
+x_*_daily_trend.png
+x_*_hourly.png
+maroncat11_*.png
+
+# Wrangler
+.wrangler/
+.claude/settings.local.json.bak.20260419_184604
