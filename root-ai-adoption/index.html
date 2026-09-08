@@ -193,7 +193,7 @@
     <p class="lead">ChatGPTやClaudeを試してはみたものの、結局いつもの仕事のやり方に戻ってしまう——その壁を、実際の業務データを使いながら1つずつ崩していきます。</p>
     <div class="ctas">
       <a href="https://form.run/@taka3210" target="_blank" rel="noopener" class="cta">無料AI活用診断を予約する</a>
-      <a href="#simulator" class="cta secondary">概算見積もりを作る</a>
+      <a href="#simulator" class="cta secondary">料金を見る</a>
     </div>
   </div>
 </section>
@@ -321,46 +321,25 @@
 
 <section id="simulator">
   <div class="wrap">
-    <div class="head-eyebrow">ESTIMATE SIMULATOR</div>
-    <h2 class="head">概算見積もりを作ってみる</h2>
-    <p class="lead-sm">気になる項目を選ぶだけで、概算金額が積み上がります。あくまで概算です。正式な見積もりは無料診断後にご提示します。</p>
+    <div class="head-eyebrow">PRICE</div>
+    <h2 class="head">料金</h2>
+    <p class="lead-sm">シンプルな2階建てです。正式なご提案は無料診断後にお渡しします。</p>
 
-    <div class="sim">
-      <div class="sim-section">
-        <h4>導入プラン（買い切り・いずれか1つ）</h4>
-        <label class="sim-option">
-          <input type="radio" name="tier" value="0" checked>
-          <div class="label"><div class="t">選択なし</div><div class="d">導入プランは不要</div></div>
-          <div class="p">¥0</div>
-        </label>
-        <label class="sim-option">
-          <input type="radio" name="tier" value="600000">
-          <div class="label"><div class="t">3か月伴走プラン</div><div class="d">12時間の個別セッション、環境構築〜自動化〜自走まで</div></div>
-          <div class="p">¥60万</div>
-        </label>
+    <div class="tiers">
+      <div class="tier featured">
+        <div class="tag">導入</div>
+        <div class="name">3か月伴走プラン</div>
+        <div class="scale">12時間の個別セッション、環境構築〜自動化〜自走まで</div>
+        <div class="amount">¥60<small>万（買い切り）</small></div>
       </div>
-
-      <div class="sim-section">
-        <h4>継続オプション（月額）</h4>
-        <label class="sim-option">
-          <input type="checkbox" data-price="50000" data-label="AI運用パートナー契約（月額）">
-          <div class="label"><div class="t">AI運用パートナー契約</div><div class="d">伴走プラン終了後の継続支援。月1回、数字と運用状況を一緒に確認</div></div>
-          <div class="p">¥5万/月</div>
-        </label>
+      <div class="tier">
+        <div class="tag">継続</div>
+        <div class="name">AI運用パートナー契約</div>
+        <div class="scale">伴走プラン終了後の継続支援。月1回、数字と運用状況を一緒に確認</div>
+        <div class="amount">¥5<small>万/月</small></div>
       </div>
-
-      <div class="sim-total">
-        <div>
-          <div class="lbl">初期費用</div>
-          <div class="val" id="simOnetime">¥0</div>
-        </div>
-        <div>
-          <div class="lbl">継続費用</div>
-          <div class="val" id="simMonthly">¥0<small>/月</small></div>
-        </div>
-      </div>
-      <p class="sim-note">※このシミュレーターの金額は全て確定済みの実契約単価に基づく概算です。実際のご提案は無料診断後、業務内容を踏まえて個別に作成します。</p>
     </div>
+    <p class="sim-note" style="margin-top:16px">※上記は確定済みの実契約単価です。正式なご提案は無料診断後、業務内容を踏まえて個別に作成します。</p>
   </div>
 </section>
 
@@ -458,44 +437,6 @@
 <footer>
   &copy; ルートコネクト株式会社 — AIコンサルタント 三井 隆義
 </footer>
-
-<script>
-(function(){
-  const monthlyEl = document.getElementById('simMonthly');
-  const onetimeEl = document.getElementById('simOnetime');
-  const monthlyCheckboxes = document.querySelectorAll('.sim-section:nth-of-type(2) input[type="checkbox"]');
-
-  function fmt(n){ return '¥' + n.toLocaleString('ja-JP'); }
-
-  function recalc(){
-    let onetime = 0;
-    let monthly = 0;
-    const checkedTier = document.querySelector('input[name="tier"]:checked');
-    if(checkedTier){ onetime += parseInt(checkedTier.value, 10); }
-    monthlyCheckboxes.forEach(cb => {
-      if(cb.checked){ monthly += parseInt(cb.dataset.price, 10); }
-    });
-    onetimeEl.textContent = fmt(onetime);
-    monthlyEl.innerHTML = fmt(monthly) + '<small>/月</small>';
-  }
-
-  document.querySelectorAll('.sim-option').forEach(opt => {
-    const input = opt.querySelector('input');
-    input.addEventListener('change', () => {
-      if(input.type === 'radio'){
-        document.querySelectorAll(`input[name="${input.name}"]`).forEach(r => {
-          r.closest('.sim-option').classList.toggle('checked', r.checked);
-        });
-      } else {
-        opt.classList.toggle('checked', input.checked);
-      }
-      recalc();
-    });
-  });
-
-  recalc();
-})();
-</script>
 
 </body>
 </html>
